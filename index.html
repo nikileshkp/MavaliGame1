@@ -148,7 +148,9 @@
     let isPlaying = true;
     let position = 0;
     let direction = 1;
-    const speed = 4;
+    const desktopSpeed = 12;
+    const mobileSpeed = 6;
+    let speed = desktopSpeed;
     let animationId;
     
     const crown = document.getElementById("crown");
@@ -162,8 +164,10 @@
     function applyScreenMode() {
       if (mobileMediaQuery.matches) {
         document.body.classList.add("mobile-screen");
+        speed = mobileSpeed;
       } else {
         document.body.classList.remove("mobile-screen");
+        speed = desktopSpeed;
       }
     }
 
@@ -203,6 +207,7 @@
       isPlaying = true;
       position = 0;
       direction = 1;
+      speed = mobileMediaQuery.matches ? mobileSpeed : desktopSpeed;
       crown.style.transform = `translateX(calc(-50% + ${position}px))`;
       resultText.innerHTML = "";
       resultText.style.color = "white";
