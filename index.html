@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Maveli Stop Game</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body {
+    background: radial-gradient(circle at top, rgba(251, 191, 36, 0.08), transparent 35%), #0f172a;
+    color: white;
+    font-family: system-ui, -apple-system, sans-serif;
+    touch-action: manipulation; /* Prevents double-tap zooming on mobile */
+  }
+
+  .game-wrapper {
+    position: relative;
+    width: min(90vw, 420px);
+    height: min(90vw, 420px);
+    margin: 0 auto;
+    border: 6px solid #fbbf24;
+    border-radius: 50%;
+    background-color: #0f172a;
+    overflow: hidden;
+    box-shadow: 0 10px 25px -5px rgba(251, 191, 36, 0.2);
+  }
+
+  .face-image {
+    position: absolute;
+    top: 21%;
+    left: 50%;
+    width: 80%;
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateX(-50%);
+    background-color: transparent;
+    overflow: visible;
+  }
+
+  .face-image img {
+    width: 72%;
+    height: auto;
+    object-fit: contain;
+    object-position: center top;
+    display: block;
+  }
+
+  #crown {
+    width: 36%;
+    max-width: 260px;
+    position: absolute;
+    top: 8%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    pointer-events: none;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.35));
+  }
+
+  #crown img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  #stop-btn {
+    transition: all 0.2s ease;
+    width: 100%;
+    max-width: 250px;
+  }
+
+  .text-center h1 {
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
+  }
+
+  .text-center h2 {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+  }
+
+  @media (max-width: 540px) {
+    .game-wrapper {
+      width: min(95vw, 360px);
+      height: min(95vw, 360px);
+    }
+
+    .face-image {
+      top: 15%;
+      width: 92%;
+    }
+
+    .face-image img {
+      width: 82%;
+    }
+
+    #crown {
+      width: 24%;
+      top: 8%;
+    }
+
+    #result-text {
+      font-size: 0.95rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+
+    #stop-btn {
+      font-size: 1.15rem;
+      padding: 1rem 0;
+    }
+  }
+  
+  #stop-btn:active {
+    transform: scale(0.95);
+  }
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="max-w-md w-full flex flex-col items-center space-y-8">
+    
+    <div class="text-center space-y-2">
+      <h1 class="text-5xl font-extrabold text-amber-400 tracking-tight">Onam Catch</h1>
+      <h2 class="text-lg text-slate-300">Tap at the Perfect Moment!</h2>
+    </div>
+
+    <div class="game-wrapper" id="game-container">
+      <div class="face-image" id="face-image">
+        <img src="maveli_face.png" alt="Maveli face" />
+      </div>
+      <div id="crown">
+        <img src="crown.png" alt="Crown" />
+      </div>
+    </div>
+
+    <div id="result-text" class="text-xl font-bold min-h-[80px] px-4 text-center flex flex-col items-center justify-center drop-shadow-md"></div>
+
+    <button id="stop-btn" onclick="handleStop()" class="w-full max-w-[250px] py-4 text-2xl bg-rose-500 hover:bg-rose-600 text-white border-none rounded-full font-bold cursor-pointer shadow-lg">
+      STOP!
+    </button>
+  
+  </div>
+
+  <script>
+    let isPlaying = true;
+    let position = 0;
+    let direction = 1;
+    const speed = 4;
+    let animationId;
+    
+    const crown = document.getElementById("crown");
+    const crownImg = crown.querySelector("img");
+    const faceImg = document.querySelector(".face-image img");
+    const container = document.getElementById("game-container");
+    const resultText = document.getElementById("result-text");
+    const button = document.getElementById("stop-btn");
+
+    function makeTransparent(imgEl) {
+      const raw = new Image();
+      raw.src = imgEl.src;
+      raw.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = raw.width;
+        canvas.height = raw.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(raw, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          const a = data[i + 3];
+          if (a > 0 && r > 220 && g > 220 && b > 220) {
+            data[i + 3] = 0;
+          }
+        }
+        ctx.putImageData(imageData, 0, 0);
+        imgEl.src = canvas.toDataURL();
+      };
+    }
+
+    function startAnimation() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function resetRound() {
+      isPlaying = true;
+      position = 0;
+      direction = 1;
+      crown.style.transform = `translateX(calc(-50% + ${position}px))`;
+      resultText.innerHTML = "";
+      resultText.style.color = "white";
+      button.innerText = "STOP!";
+      button.style.backgroundColor = "#f43f5e";
+    }
+
+    function animate() {
+      if (!isPlaying) return;
+      
+      const containerWidth = container.offsetWidth;
+      const crownWidth = crown.offsetWidth;
+      const minX = -((containerWidth / 2) - (crownWidth / 2));
+      const maxX = (containerWidth / 2) - (crownWidth / 2);
+      
+      position += speed * direction;
+      
+      if (position >= maxX || position <= minX) {
+        direction *= -1;
+      }
+      
+      crown.style.transform = `translateX(calc(${position}px - 50%))`;
+      animationId = requestAnimationFrame(animate);
+    }
+
+    window.onload = function() {
+      makeTransparent(faceImg);
+      makeTransparent(crownImg);
+      resetRound();
+      startAnimation();
+    };
+
+    function handleStop() {
+      if (!isPlaying) {
+        resetRound();
+        startAnimation();
+        return;
+      }
+
+      isPlaying = false;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+      }
+
+      const crownRect = crown.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      const crownCenter = crownRect.left + (crownRect.width / 2);
+      const containerCenter = containerRect.left + (containerRect.width / 2);
+      const difference = Math.abs(containerCenter - crownCenter);
+      const maxDifference = (containerRect.width - crownRect.width) / 2;
+      const accuracy = Math.max(0, 100 - Math.round((difference / maxDifference) * 100));
+
+      if (accuracy === 100) {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🟢 100%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>🎯 Perfect timing!</strong></div>
+            <div style="margin-bottom:0.35rem;">👑 Maveli himself is impressed!</div>
+            <div style="margin-bottom:0.35rem;"><strong>🎁 ഓണക്കോടി secured!</strong></div>
+            <div>💯 <em>100% Accurate!</em></div>
+          </div>`;
+        resultText.style.color = "#fbbf24";
+      } else if (accuracy >= 90) {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🟢 90–99%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>😲 Almost perfect!</strong></div>
+            <div style="margin-bottom:0.35rem;">Maveli says, "One blink cost you the prize!" 👀</div>
+            <div>🥣 Extra payasam is still possible! 😄</div>
+          </div>`;
+        resultText.style.color = "#fbbf24";
+      } else if (accuracy >= 80) {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🟡 80–89%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>👏 Very good!</strong></div>
+            <div style="margin-bottom:0.35rem;">Maveli noticed your effort.</div>
+            <div>🍌 You qualify for <strong>one extra banana</strong> with the Sadya! 😂</div>
+          </div>`;
+        resultText.style.color = "#fbbf24";
+      } else if (accuracy >= 70) {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🟠 70–79%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>😅 Good try!</strong></div>
+            <div style="margin-bottom:0.35rem;">You were just a little late...</div>
+            <div>🥣 Payasam is still available... but only <strong>half a ladle!</strong> 🤣</div>
+          </div>`;
+        resultText.style.color = "#fb923c";
+      } else if (accuracy >= 60) {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🔴 60–69%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>🙈 Ayyo!</strong></div>
+            <div style="margin-bottom:0.35rem;">Looks like you blinked at the wrong time! 😂</div>
+            <div>🍛 You'll have to stand at the end of the Sadya queue.</div>
+          </div>`;
+        resultText.style.color = "#f87171";
+      } else {
+        resultText.innerHTML = `<div style="max-width: 280px; text-align:center; line-height:1.35;">
+            <div style="font-size:1.15rem; font-weight:900; margin-bottom:0.35rem;">🔴 Below 60%</div>
+            <div style="font-size:1.05rem; margin-bottom:0.35rem;"><strong>😭 Noooo!</strong></div>
+            <div style="margin-bottom:0.35rem;">Maveli says:</div>
+            <div><strong>"No Sadya for you... come back next Onam!"</strong> 😂</div>
+          </div>`;
+        resultText.style.color = "#f87171";
+      }
+
+      button.innerText = "PLAY AGAIN";
+      button.style.backgroundColor = "#22c55e";
+    }
+  </script>
+
+</body>
+</html>
