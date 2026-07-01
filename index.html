@@ -87,17 +87,18 @@
     }
 
     .face-image {
-      top: 15%;
-      width: 92%;
+      top: 19%;
+      width: 84%;
     }
 
     .face-image img {
-      width: 82%;
+      width: 70%;
     }
 
     #crown {
-      width: 24%;
-      top: 8%;
+      width: 36%;
+      max-width: 234px;
+      top: 7%;
     }
 
     #result-text {
@@ -156,6 +157,15 @@
     const container = document.getElementById("game-container");
     const resultText = document.getElementById("result-text");
     const button = document.getElementById("stop-btn");
+    const mobileMediaQuery = window.matchMedia("(max-width: 540px)");
+
+    function applyScreenMode() {
+      if (mobileMediaQuery.matches) {
+        document.body.classList.add("mobile-screen");
+      } else {
+        document.body.classList.remove("mobile-screen");
+      }
+    }
 
     function makeTransparent(imgEl) {
       const raw = new Image();
@@ -219,6 +229,8 @@
     }
 
     window.onload = function() {
+      applyScreenMode();
+      mobileMediaQuery.addEventListener("change", applyScreenMode);
       makeTransparent(faceImg);
       makeTransparent(crownImg);
       resetRound();
